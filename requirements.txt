@@ -1,0 +1,11 @@
+Flask==3.0.0
+firebase-admin==6.2.0
+python-dotenv
+requests
+gunicorn
+
+# Frontend dependencies (install via npm):
+# three
+# @react-three/fiber
+# @react-three/drei
+# framer-motion
