@@ -129,6 +129,24 @@ def analyze():
         loan_term=int(data.get('loan_term', 30)),
         climate_score=analysis_result['climate_score'],
         risk_level=analysis_result['loan_recommendation']['risk_level'],
+        
+        # Explicit Structural DB mappings
+        heat_risk=analysis_result['risk_profile']['heat'],
+        flood_risk=analysis_result['risk_profile']['flood'],
+        storm_risk=analysis_result['risk_profile'].get('storm', 0),
+        fire_risk=analysis_result['risk_profile'].get('fire', 0),
+        overall_risk_score=analysis_result.get('overall_risk_score', analysis_result['climate_score']),
+        ml_risk_score=analysis_result.get('ml_risk_score', analysis_result['climate_score']),
+        
+        greenery_percent=analysis_result.get('environment', {}).get('greenery', 0),
+        water_percent=analysis_result.get('environment', {}).get('water', 0),
+        builtup_percent=analysis_result.get('environment', {}).get('built_up', 0),
+        
+        avg_temperature=analysis_result.get('avg_temperature', 28.5),
+        precipitation=analysis_result.get('precipitation', 120.0),
+        elevation=analysis_result.get('elevation', 45.0),
+
+        # Keep legacy fallback structure intact
         risk_factors=analysis_result['risk_profile'],
         projections=analysis_result.get('temperature_projection', []), 
         ai_insights=analysis_result.get('ai_insights'),
@@ -138,10 +156,7 @@ def analyze():
     db.session.add(analysis)
     db.session.commit()
 
-    # Add DB ID to result
-    analysis_result['id'] = analysis.id
-
-    return jsonify(analysis_result), 200
+    return jsonify(analysis.to_dict()), 200
 
 @analysis_bp.route('/analyze-property', methods=['POST'])
 @jwt_required(optional=True)
@@ -164,8 +179,26 @@ def analyze_property():
         loan_term=int(data.get('loan_term', 30)),
         climate_score=analysis_result['climate_score'],
         risk_level=analysis_result['loan_recommendation']['risk_level'],
+        
+        # Explicit Structural DB mappings defined by requirement
+        heat_risk=analysis_result['risk_profile']['heat'],
+        flood_risk=analysis_result['risk_profile']['flood'],
+        storm_risk=analysis_result['risk_profile'].get('storm', 0),
+        fire_risk=analysis_result['risk_profile'].get('fire', 0),
+        overall_risk_score=analysis_result.get('overall_risk_score', analysis_result['climate_score']),
+        ml_risk_score=analysis_result.get('ml_risk_score', analysis_result['climate_score']),
+        
+        greenery_percent=analysis_result.get('environment', {}).get('greenery', 0),
+        water_percent=analysis_result.get('environment', {}).get('water', 0),
+        builtup_percent=analysis_result.get('environment', {}).get('built_up', 0),
+        
+        avg_temperature=analysis_result.get('avg_temperature', 28.5),
+        precipitation=analysis_result.get('precipitation', 120.0),
+        elevation=analysis_result.get('elevation', 45.0),
+
+        # Keep fallback JSON structure intact for existing legacy mapping hooks
         risk_factors=analysis_result['risk_profile'],
-        projections=analysis_result.get('temperature_projection', []),
+        projections=analysis_result.get('temperature_projection', []), 
         ai_insights=analysis_result.get('ai_insights'),
         loan_recommendation=analysis_result.get('loan_recommendation')
     )
@@ -201,24 +234,3 @@ def geocode():
         "display_name": query
     }), 200
 
-@analysis_bp.route('/compare', methods=['POST'])
-def compare_locations():
-    data = request.json
-    loc_a = data.get('location_a')
-    loc_b = data.get('location_b')
-    
-    if not loc_a or not loc_b:
-        return jsonify({"error": "Both location_a and location_b are required"}), 400
-        
-    res_a = ClimateEngine.analyze({"address": loc_a})
-    res_b = ClimateEngine.analyze({"address": loc_b})
-    
-    if "error" in res_a:
-        return jsonify({"error": f"Error analyzing Location A: {res_a['error']}"}), 400
-    if "error" in res_b:
-        return jsonify({"error": f"Error analyzing Location B: {res_b['error']}"}), 400
-        
-    return jsonify({
-        "location_a": res_a,
-        "location_b": res_b
-    }), 200

@@ -1,0 +1,61 @@
+{
+  "ai_insights": "The property has a climate score of 45.2. Key risks include heat exposure. Long-term trends suggests moderate environmental sensitivity affecting asset resilience.",
+  "climate_score": 45.2,
+  "coordinates": [
+    20.5937,
+    78.9629
+  ],
+  "environment": {
+    "built_up": 91,
+    "greenery": 6,
+    "water": 3
+  },
+  "environmental_composition": {
+    "built_up": 91,
+    "greenery": 6,
+    "water": 3
+  },
+  "id": 13,
+  "loan_recommendation": {
+    "recommendation_text": "Increased rate recommended + mandatory flood/fire insurance suggested.",
+    "recommended_interest_adjustment": 0.25,
+    "risk_level": "High"
+  },
+  "location_name": "India",
+  "risk_profile": {
+    "fire": 35.3,
+    "flood": 21.9,
+    "heat": 100,
+    "sea_level": 0,
+    "storm": 52.9
+  },
+  "temperature_projection": [
+    {
+      "value": 0.5,
+      "year": 2030
+    },
+    {
+      "value": 0.8,
+      "year": 2040
+    },
+    {
+      "value": 1.2,
+      "year": 2050
+    },
+    {
+      "value": 1.5,
+      "year": 2060
+    },
+    {
+      "value": 2.0,
+      "year": 2070
+    }
+  ],
+  "temperature_trend": [
+    0.5,
+    0.8,
+    1.2,
+    1.5,
+    2.0
+  ]
+}

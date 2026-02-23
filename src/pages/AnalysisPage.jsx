@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-lea
 import { useNavigate } from 'react-router-dom';
 import { Crosshair, LoaderCircle, Bolt, BarChart2 } from 'lucide-react';
 import GlassCard from '../components/UI/GlassCard';
-import CompareModal from '../components/CompareModal';
 import {
     Chart as ChartJS,
     RadialLinearScale,
@@ -57,23 +56,22 @@ const AnalysisPage = () => {
     const [mapCenter, setMapCenter] = useState([20.5937, 78.9629]); // India center default
     const [markerPosition, setMarkerPosition] = useState([20.5937, 78.9629]);
     const [analysisData, setAnalysisData] = useState(null);
-    const [showCompare, setShowCompare] = useState(false);
 
     const setPosition = (pos) => {
         setMapCenter(pos);
         setMarkerPosition(pos);
     };
 
-    // Dynamic Chart Data derived from analysisData
+    // Dynamic Chart Data mapping strictly to SQLite DB schema
     const radarData = {
-        labels: ['Flood', 'Heat', 'Storm', 'Fire'],
+        labels: ['Heat', 'Flood', 'Storm', 'Fire'],
         datasets: [{
             label: 'Risk Profile',
             data: analysisData ? [
-                analysisData.risk_profile.flood,
-                analysisData.risk_profile.heat,
-                analysisData.risk_profile.storm,
-                analysisData.risk_profile.fire
+                analysisData.heat_risk ?? 0,
+                analysisData.flood_risk ?? 0,
+                analysisData.storm_risk ?? 0,
+                analysisData.fire_risk ?? 0
             ] : [0, 0, 0, 0],
             backgroundColor: 'rgba(255, 159, 67, 0.2)',
             borderColor: '#ff9f43',
@@ -82,10 +80,10 @@ const AnalysisPage = () => {
     };
 
     const tempTrendData = {
-        labels: analysisData?.temperature_trend?.map((_, i) => `Year ${i + 1}`) || [],
+        labels: analysisData?.temperature_trend?.map((_, i) => `Year ${i + 1}`) || (Array.isArray(analysisData?.projections) ? analysisData.projections.map(d => (d.year || `Year`)) : []),
         datasets: [{
             label: 'Temp Increase (°C)',
-            data: analysisData?.temperature_trend || [],
+            data: analysisData?.temperature_trend || (Array.isArray(analysisData?.projections) ? analysisData.projections.map(d => (d.value !== undefined ? d.value : d)) : []),
             borderColor: '#f6b93b',
             tension: 0.4,
             fill: true,
@@ -97,11 +95,11 @@ const AnalysisPage = () => {
         labels: ['Built Up', 'Greenery', 'Water'],
         datasets: [{
             data: analysisData ? [
-                analysisData.environment.built_up,
-                analysisData.environment.greenery,
-                analysisData.environment.water
+                analysisData.builtup_percent ?? 0,
+                analysisData.greenery_percent ?? 0,
+                analysisData.water_percent ?? 0
             ] : [0, 0, 0],
-            backgroundColor: ['#eb4d4b', '#00ff9d', '#ffbe76'],
+            backgroundColor: ['#e17055', '#00ff9d', '#0984e3'],
             borderWidth: 0,
         }]
     };
@@ -127,6 +125,10 @@ const AnalysisPage = () => {
 
     const radarOptions = {
         ...commonOptions,
+        plugins: {
+            ...commonOptions.plugins,
+            legend: { display: false }
+        },
         scales: {
             r: {
                 beginAtZero: true,
@@ -446,21 +448,10 @@ const AnalysisPage = () => {
                         </select>
                     </div>
 
-                    <button
-                        type="button"
-                        className="btn btn-outline"
-                        style={{ width: '100%', marginBottom: '1rem', justifyContent: 'center', gap: '0.5rem' }}
-                        onClick={() => setShowCompare(true)}
-                    >
-                        <BarChart2 size={18} /> Compare Location
-                    </button>
-
                     <button type="submit" className="btn btn-cta" style={{ width: '100%', marginTop: '0.5rem' }}>
                         <Bolt size={18} /> Generate Score
                     </button>
                 </form>
-
-                <CompareModal isOpen={showCompare} onClose={() => setShowCompare(false)} />
 
                 {loading && (
                     <div style={{ textAlign: 'center', marginTop: '2rem', color: 'var(--accent-green)' }}>
