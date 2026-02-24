@@ -3,6 +3,9 @@ firebase-admin==6.2.0
 python-dotenv
 requests
 gunicorn
+pandas
+scikit-learn
+joblib
 
 # Frontend dependencies (install via npm):
 # three

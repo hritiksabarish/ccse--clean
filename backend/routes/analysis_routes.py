@@ -6,6 +6,8 @@ from services.report_service import ReportService
 from database import db
 import google.generativeai as genai
 import os
+import requests
+import csv
 
 analysis_bp = Blueprint('analysis', __name__)
 
@@ -118,6 +120,51 @@ def analyze():
     
     if "error" in analysis_result:
         return jsonify(analysis_result), 400
+
+    # --- STEP 2: DATA LOGGING ---
+    try:
+        log_file = os.path.join(os.getcwd(), 'ml-earth-engine', 'earth_training_data.csv')
+        # Ensure directory exists if we are running from a different place
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        
+        file_exists = os.path.isfile(log_file)
+        with open(log_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(['heat_risk', 'flood_risk', 'storm_risk', 'elevation', 'temperature_trend', 'green_cover_ratio', 'final_climate_score'])
+            
+            writer.writerow([
+                analysis_result['risk_profile']['heat'],
+                analysis_result['risk_profile']['flood'],
+                analysis_result['risk_profile'].get('storm', 0),
+                analysis_result.get('elevation', 45.0),
+                analysis_result.get('temperature_trend', [0.8])[0], # Using first trend value as simplified feature
+                analysis_result.get('environment', {}).get('greenery', 0),
+                analysis_result['climate_score']
+            ])
+    except Exception as e:
+        print(f"ML Logging Error: {e}")
+
+    # --- STEP 5 & 6: CONNECT TO ML MODEL & FALLBACK ---
+    ml_score = analysis_result['climate_score'] # Default to original
+    try:
+        ml_payload = {
+            "heat_risk": analysis_result['risk_profile']['heat'],
+            "flood_risk": analysis_result['risk_profile']['flood'],
+            "storm_risk": analysis_result['risk_profile'].get('storm', 0),
+            "elevation": analysis_result.get('elevation', 45.0),
+            "temperature_trend": analysis_result.get('temperature_trend', [0.8])[0],
+            "green_cover_ratio": analysis_result.get('environment', {}).get('greenery', 0)
+        }
+        ml_response = requests.post("http://localhost:5050/ml-predict", json=ml_payload, timeout=2)
+        if ml_response.status_code == 200:
+            ml_data = ml_response.json()
+            if 'ml_score' in ml_data:
+                ml_score = ml_data['ml_score']
+                # Replace ONLY the final score calculation logic
+                analysis_result['climate_score'] = ml_score
+    except Exception as e:
+        print(f"ML Prediction Service unavailable, falling back to original score: {e}")
 
     # Persist to database for Portfolio
     analysis = PropertyAnalysis(
