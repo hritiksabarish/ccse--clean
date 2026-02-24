@@ -8,6 +8,37 @@ import google.generativeai as genai
 import os
 import requests
 import csv
+import joblib
+
+def calculate_loan_pricing(climate_score):
+    base_rate = 8.0
+    try:
+        score = float(climate_score)
+    except (ValueError, TypeError):
+        score = 0.0
+
+    if score >= 80:
+        adjustment = -0.5
+        approval = "Approved"
+        risk_category = "Low Risk"
+    elif score >= 60:
+        adjustment = 1.0
+        approval = "Conditional Approval"
+        risk_category = "Moderate Risk"
+    elif score >= 40:
+        adjustment = 2.5
+        approval = "High Risk Review"
+        risk_category = "Elevated Risk"
+    else:
+        adjustment = 4.0
+        approval = "Rejected"
+        risk_category = "Severe Climate Risk"
+        
+    return {
+        "interest_rate": round(base_rate + adjustment, 2),
+        "approval_status": approval,
+        "risk_category": risk_category
+    }
 
 analysis_bp = Blueprint('analysis', __name__)
 
@@ -148,23 +179,45 @@ def analyze():
     # --- STEP 5 & 6: CONNECT TO ML MODEL & FALLBACK ---
     ml_score = analysis_result['climate_score'] # Default to original
     try:
-        ml_payload = {
-            "heat_risk": analysis_result['risk_profile']['heat'],
-            "flood_risk": analysis_result['risk_profile']['flood'],
-            "storm_risk": analysis_result['risk_profile'].get('storm', 0),
-            "elevation": analysis_result.get('elevation', 45.0),
-            "temperature_trend": analysis_result.get('temperature_trend', [0.8])[0],
-            "green_cover_ratio": analysis_result.get('environment', {}).get('greenery', 0)
-        }
-        ml_response = requests.post("http://localhost:5050/ml-predict", json=ml_payload, timeout=2)
-        if ml_response.status_code == 200:
-            ml_data = ml_response.json()
-            if 'ml_score' in ml_data:
-                ml_score = ml_data['ml_score']
-                # Replace ONLY the final score calculation logic
-                analysis_result['climate_score'] = ml_score
+        model_path = os.path.join(os.getcwd(), 'ml-earth-engine', 'climate_model.pkl')
+        if os.path.exists(model_path):
+            rf_model = joblib.load(model_path)
+            
+            # Match the training features: heat_risk, flood_risk, storm_risk, elevation, temperature_trend, green_cover_ratio
+            features = [[
+                float(analysis_result['risk_profile']['heat']),
+                float(analysis_result['risk_profile']['flood']),
+                float(analysis_result['risk_profile'].get('storm', 0)),
+                float(analysis_result.get('elevation', 45.0)),
+                float(analysis_result.get('temperature_trend', [0.8])[0]),
+                float(analysis_result.get('environment', {}).get('greenery', 0))
+            ]]
+            
+            pred = rf_model.predict(features)[0]
+            ml_score = round(float(pred), 1)
+            analysis_result['climate_score'] = ml_score
+            
+            # REGENERATE AI EXPLANATION WITH NEW ML SCORE
+            new_ai_insight = ClimateEngine._generate_explanation(
+                ml_score, 
+                analysis_result['risk_profile'],
+                analysis_result.get('temperature_projection', []),
+                analysis_result.get('environment', {})
+            )
+            analysis_result['ai_insights'] = new_ai_insight
+            
+            # REGENERATE LOAN RECOMMENDATION WITH NEW ML SCORE
+            new_loan_rec = ClimateEngine._calculate_loan_recommendation(ml_score)
+            analysis_result['loan_recommendation'] = new_loan_rec
+        else:
+            print("Local Model file climate_model.pkl not found, using fallback score.")
+            
     except Exception as e:
-        print(f"ML Prediction Service unavailable, falling back to original score: {e}")
+        print(f"Local ML Prediction failed, falling back to original score: {e}")
+
+    # Fallback/Safe-inject Loan Pricing Logic into the API response
+    if "loan_pricing" not in analysis_result:
+        analysis_result["loan_pricing"] = calculate_loan_pricing(ml_score)
 
     # Persist to database for Portfolio
     analysis = PropertyAnalysis(
@@ -215,6 +268,48 @@ def analyze_property():
     
     if "error" in analysis_result:
         return jsonify(analysis_result), 400
+        
+    # --- ML MODEL PREDICTION ---
+    ml_score = analysis_result['climate_score'] # Default to original
+    try:
+        model_path = os.path.join(os.getcwd(), 'ml-earth-engine', 'climate_model.pkl')
+        if os.path.exists(model_path):
+            rf_model = joblib.load(model_path)
+            
+            features = [[
+                float(analysis_result['risk_profile']['heat']),
+                float(analysis_result['risk_profile']['flood']),
+                float(analysis_result['risk_profile'].get('storm', 0)),
+                float(analysis_result.get('elevation', 45.0)),
+                float(analysis_result.get('temperature_trend', [0.8])[0]),
+                float(analysis_result.get('environment', {}).get('greenery', 0))
+            ]]
+            
+            pred = rf_model.predict(features)[0]
+            ml_score = round(float(pred), 1)
+            analysis_result['climate_score'] = ml_score
+            
+            # REGENERATE AI EXPLANATION WITH NEW ML SCORE
+            new_ai_insight = ClimateEngine._generate_explanation(
+                ml_score, 
+                analysis_result['risk_profile'],
+                analysis_result.get('temperature_projection', []),
+                analysis_result.get('environment', {})
+            )
+            analysis_result['ai_insights'] = new_ai_insight
+            
+            # REGENERATE LOAN RECOMMENDATION WITH NEW ML SCORE
+            new_loan_rec = ClimateEngine._calculate_loan_recommendation(ml_score)
+            analysis_result['loan_recommendation'] = new_loan_rec
+        else:
+            print("Local Model file climate_model.pkl not found, using fallback score.")
+            
+    except Exception as e:
+        print(f"Local ML Prediction failed, falling back to original score: {e}")
+        
+    # Fallback/Safe-inject Loan Pricing Logic into the API response
+    if "loan_pricing" not in analysis_result:
+        analysis_result["loan_pricing"] = calculate_loan_pricing(ml_score)
         
     # Save analysis to database
     analysis = PropertyAnalysis(

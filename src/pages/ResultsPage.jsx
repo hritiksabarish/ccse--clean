@@ -195,7 +195,7 @@ const ResultsPage = () => {
                         </div>
                     </div>
 
-                    <div className={`loan-impact ${loanRec.risk_level === 'Low' ? 'safe' : ''}`}>
+                    <div className={`loan-impact ${loanRec.risk_level === 'Low' ? 'safe' : ''}`} style={{ textAlign: 'center' }}>
                         <h3>Loan Recommendation</h3>
                         <p style={{ fontSize: '0.9rem', color: '#ff9f43', marginBottom: '0.5rem' }}>
                             Adjustment: {loanRec.recommended_interest_adjustment > 0 ? '+' : ''}{loanRec.recommended_interest_adjustment}%
@@ -204,7 +204,7 @@ const ResultsPage = () => {
                     </div>
                 </GlassCard>
 
-                <div className="right-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', gridColumn: 'span 8' }}>
+                <div className="right-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', gridColumn: 'span 12' }}>
                     <GlassCard className="risk-card" style={{ width: '100%' }}>
                         <h3>Top Risk Factors</h3>
                         <ul style={{ listStyle: 'none', marginTop: '1rem' }}>
@@ -248,6 +248,27 @@ const ResultsPage = () => {
                         <Line data={timelineData} options={chartOptions} />
                     </div>
                 </GlassCard>
+
+                {/* --- NEW CLIMATE ADJUSTED FINTECH CARD --- */}
+                {analysisData.loan_pricing && (
+                    <GlassCard className="pricing-card" style={{ gridColumn: 'span 12', border: '1px solid rgba(255, 159, 67, 0.3)', marginTop: '1rem' }}>
+                        <h3 style={{ marginBottom: '1rem', color: '#ffbe76', textAlign: 'center' }}>Climate-Adjusted Bank Loan Pricing</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+                            <div style={{ textAlign: 'center', flex: 1 }}>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Interest Rate</p>
+                                <p style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ff9f43' }}>{analysisData.loan_pricing.interest_rate}%</p>
+                            </div>
+                            <div style={{ textAlign: 'center', flex: 1, borderLeft: '1px solid rgba(255,255,255,0.1)', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Approval Status</p>
+                                <p style={{ fontSize: '1.2rem', fontWeight: '600', marginTop: '0.5rem' }}>{analysisData.loan_pricing.approval_status}</p>
+                            </div>
+                            <div style={{ textAlign: 'center', flex: 1 }}>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Risk Category</p>
+                                <p style={{ fontSize: '1.2rem', fontWeight: '600', marginTop: '0.5rem' }}>{analysisData.loan_pricing.risk_category}</p>
+                            </div>
+                        </div>
+                    </GlassCard>
+                )}
 
                 <div style={{ gridColumn: 'span 12', textAlign: 'center', marginTop: '2rem' }}>
                     <button onClick={handleDownload} className="btn btn-outline">

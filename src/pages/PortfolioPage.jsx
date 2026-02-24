@@ -8,19 +8,18 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import Papa from 'papaparse';
 import { API_BASE } from '../services/api';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useNavigate } from 'react-router-dom';
+import PortfolioHeatmap from '../components/PortfolioHeatmap';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-// Fix for default marker icons in Leaflet + React
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
 let DefaultIcon = L.icon({
-    iconUrl: markerIcon,
-    shadowUrl: markerShadow,
+    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+    shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
     iconSize: [25, 41],
-    iconAnchor: [12, 41]
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34]
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
@@ -352,13 +351,21 @@ const PortfolioPage = () => {
                 <div className="portfolio-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
                     {/* Map Section */}
                     <GlassCard style={{ height: '600px', padding: 0, overflow: 'hidden', position: 'relative' }}>
-                        <MapContainer center={INDIA_CENTER} zoom={DEFAULT_ZOOM} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+                        <MapContainer center={INDIA_CENTER} zoom={DEFAULT_ZOOM} style={{ height: '100%', width: '100%' }} zoomControl={false} preferCanvas={true} scrollWheelZoom={true}>
                             <TileLayer
-                                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             />
+
+                            {/* Heatmap Layer - Rendered Below Markers */}
+                            <PortfolioHeatmap portfolioData={properties.filter(p => p.latitude && p.longitude)} />
+
                             {properties.filter(p => p.latitude && p.longitude).map(p => (
-                                <Marker key={p.id || Math.random()} position={[p.latitude, p.longitude]}>
+                                <Marker
+                                    key={p.analysis_id || p.id || Math.random()}
+                                    position={[Number(p.latitude), Number(p.longitude)]}
+                                    icon={DefaultIcon}
+                                >
                                     <Popup>
                                         <div style={{ color: '#000', padding: '0.5rem' }}>
                                             <h4 style={{ margin: 0 }}>{p.property_name}</h4>
