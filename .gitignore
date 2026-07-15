@@ -99,3 +99,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+.vite/
+
+temp_response.json

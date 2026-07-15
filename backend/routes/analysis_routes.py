@@ -61,8 +61,8 @@ def ai_chat():
     import logging
     from dotenv import load_dotenv
     
-    # Ensure environment variables are loaded
-    load_dotenv()
+    # Ensure environment variables are loaded and override old cached ones
+    load_dotenv(override=True)
     
     # Configure logging
     logging.basicConfig(level=logging.INFO)
@@ -99,7 +99,6 @@ def ai_chat():
         logger.info("Initializing Google Gemini API...")
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
-        
         context_prompt = f"""
         You are a professional, highly knowledgeable climate risk assistant for a fintech platform.
         Your role is to help users (investors, lenders, or property owners) understand the climate-related 
